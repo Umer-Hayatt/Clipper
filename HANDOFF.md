@@ -157,8 +157,16 @@ the text, `--fast` for the hardware encoder (recommended on this PC), `--fps sou
      - Titles: `hook.style` bar|pill|text, `hook.placement` auto|top. Seam captions push the title to the top.
      - Beats: `beats.enabled`. Claude returns 0-2 peaks per clip; each gets a big tilted word (typography role
        `beat`) and a punch-in zoom on the cam (`captions.beats`, `captions.zoom_filter`).
-     - `clipper/sfx.py` makes boom/whoosh/pop from plain maths (no downloads). With `sfx.enabled` they are mixed
-       after loudnorm: a boom on each beat, a whoosh as the title appears.
+     - `clipper/sfx.py` makes thud/boom/whoosh/pop from plain maths (no downloads). With `sfx.enabled` they are
+       mixed after loudnorm: a thud on each beat, moved to the next pause within 1.5 s (`sfx.pause_reach`). Pauses
+       are found in the clip's own sound (`sfx.in_pause`: 120 ms at 14 dB under the loud part), not in word
+       timings: YouTube caption words have no gaps and the last word of a line is stretched. With no pause in
+       reach the hit stays on the beat (3 of 5 CaseOh beats sit inside unbroken talking).
+       No title whoosh by default (`sfx.on_hook`). Retuned on 2026-11-15 from `sound_events.py` measurements of
+       the 13 references: added effects are rare, sit in pauses (speech score near 0), are 0 to +10 dB vs the clip's
+       median level, and none plays a whoosh with the title. The old boom had 1% of its energy above 150 Hz
+       (inaudible on phones); every sound now has at least 30% there (test in `test_styles.py`). Cached WAVs carry
+       `sfx.VERSION` in their name, so changed sounds are remade. Music beds (in 7 of 13 refs) are not done.
      - `moments.write` asks only for the extra fields a run needs (`config.text_needs`), so default prompts and
        caches are unchanged.
      - CLI: `--look`, `--title`, `--beats`, `--sfx`. `specimen.py`: `--preset`, `--keywords`, `--beats`.

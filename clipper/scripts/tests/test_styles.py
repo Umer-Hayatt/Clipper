@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from clipper import captions, config, moments, sfx  # noqa: E402
@@ -89,7 +91,7 @@ class TestSfx(unittest.TestCase):
             inputs, graph = sfx.mix([(0.0, "whoosh"), (2.5, "boom"), (1.0, "nope")], 3,
                                     Path(tmp), 0.5)
             self.assertEqual(inputs.count("-i"), 2)
-            self.assertTrue((Path(tmp) / "sfx" / "boom.wav").exists())
+            self.assertTrue((Path(tmp) / "sfx" / f"boom_v{sfx.VERSION}.wav").exists())
         self.assertIn("adelay=2500:all=1", graph)
         self.assertIn("amix=inputs=3", graph)
         self.assertTrue(graph.endswith("[a]"))
@@ -97,6 +99,58 @@ class TestSfx(unittest.TestCase):
     def test_no_events_passes_audio_through(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(sfx.mix([], 1, Path(tmp), 0.5), ([], "[a0]anull[a]"))
+
+    def test_every_sound_reaches_phone_speakers(self):
+        """At least 30% of each sound's energy is above 150 Hz (phones play little below;
+        the old boom had 1%)."""
+        for name in sfx.NAMES:
+            x = sfx._MAKERS[name]()
+            spec = np.abs(np.fft.rfft(x)) ** 2
+            freqs = np.fft.rfftfreq(len(x), 1 / sfx.SR)
+            self.assertGreater(spec[freqs >= 150].sum() / spec.sum(), 0.30, name)
+
+
+class TestHitInPause(unittest.TestCase):
+    RATE = 16000
+
+    def _talk(self, *spans, total=4.0):
+        """Loud noise ("talking") in the given (start, end) spans, quiet hiss elsewhere."""
+        rng = np.random.default_rng(3)
+        w = rng.standard_normal(int(total * self.RATE)) * 0.002
+        for a, b in spans:
+            i, j = int(a * self.RATE), int(b * self.RATE)
+            w[i:j] = rng.standard_normal(j - i) * 0.3
+        return w.astype(np.float32)
+
+    def test_waits_for_the_first_real_pause(self):
+        # a 60 ms dip at 1.40 is too short; the real pause starts at 1.90
+        w = self._talk((0.5, 1.4), (1.46, 1.9), (2.4, 3.5))
+        self.assertAlmostEqual(sfx.in_pause(1.2, w, self.RATE), 1.9, delta=0.03)
+
+    def test_already_in_a_pause_stays(self):
+        w = self._talk((0.5, 1.4), (2.4, 3.5))
+        self.assertAlmostEqual(sfx.in_pause(1.8, w, self.RATE), 1.8, delta=0.03)
+
+    def test_no_pause_within_reach_stays(self):
+        w = self._talk((0.5, 3.5))
+        self.assertEqual(sfx.in_pause(1.2, w, self.RATE), 1.2)
+
+    def test_reach_zero_or_no_audio_stays(self):
+        w = self._talk((0.5, 1.4))
+        self.assertEqual(sfx.in_pause(1.2, w, self.RATE, reach=0), 1.2)
+        self.assertEqual(sfx.in_pause(1.2, None, self.RATE), 1.2)
+        self.assertEqual(sfx.in_pause(9.0, w, self.RATE), 9.0)    # past the end
+
+    def test_mix_accepts_tagged_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inputs, _ = sfx.mix([(1.0, "thud", "beat")], 1, Path(tmp), 0.5)
+        self.assertEqual(inputs.count("-i"), 1)
+
+    def test_defaults_match_the_references(self):
+        d = config.DEFAULTS["sfx"]
+        self.assertFalse(d["enabled"])                         # still opt-in
+        self.assertEqual(d["on_beat"], "thud")
+        self.assertIsNone(d["on_hook"])
 
 
 if __name__ == "__main__":

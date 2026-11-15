@@ -62,7 +62,7 @@ def parse(argv):
     p.add_argument("--beats", action="store_true",
                    help="flash a big word with a punch-in zoom on each clip's peak moment")
     p.add_argument("--sfx", action="store_true",
-                   help="add sound effects (a hit on each beat, a whoosh as the title appears)")
+                   help="add sound effects (a thud on each beat, in the next pause in speech)")
     p.add_argument("--fps", dest="output_fps",
                    help='frames per second of the clips: a number (default 30) or "source"')
     return p.parse_args(argv)

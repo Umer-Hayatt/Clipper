@@ -148,7 +148,7 @@ def overlays(cur, n_in, m, words, dur, name, workdir, cfg, theme, look, cam_h, f
     Returns (filters, input args, final label, notes)."""
     filters, inputs, notes = [], [], {}
     rate = f"{fps:.3f}".rstrip("0").rstrip(".")
-    sounds = []                                   # (seconds, sfx name) for finish()
+    sounds = []                                   # (seconds, sfx name, kind) for finish()
 
     show = cfg["captions"].get("show", True)
     if show == "auto":
@@ -206,14 +206,15 @@ def overlays(cur, n_in, m, words, dur, name, workdir, cfg, theme, look, cam_h, f
             cur = "vbt"
             notes["beats"] = len(beat_items)
             if cfg["sfx"].get("on_beat"):
-                sounds += [(float(b["at"]), cfg["sfx"]["on_beat"]) for b in beat_items]
+                # finish() moves these into the next pause in the clip's sound
+                sounds += [(float(b["at"]), cfg["sfx"]["on_beat"], "beat") for b in beat_items]
 
     if hook_png:
         inputs += ["-framerate", rate, "-i", str(hook_png)]
         filters.append(hook.overlay(cur, n_in, hook_top, fps, cfg, theme, "vhk"))
         cur, n_in = "vhk", n_in + 1
         if cfg["sfx"].get("on_hook"):
-            sounds.append((0.0, cfg["sfx"]["on_hook"]))
+            sounds.append((0.0, cfg["sfx"]["on_hook"], "hook"))
     if cfg["sfx"].get("enabled") and sounds:
         notes["sfx"] = sorted(sounds)
 
@@ -267,13 +268,21 @@ def finish(p, outdir, workdir, cfg, known):
     filters += extra
     filters.append(f"[{cur}]format=yuv420p[v]")
     if notes.get("sfx"):
+        reach = float(cfg["sfx"].get("pause_reach", 1.5))
+        if reach > 0 and any(kind == "beat" for _, _, kind in notes["sfx"]):
+            try:
+                wave = pcm(part, 16000, p["offset"], dur)
+            except RuntimeError:
+                wave = None
+            notes["sfx"] = sorted((sfx.in_pause(at, wave, 16000, reach) if kind == "beat" else at,
+                                   name, kind) for at, name, kind in notes["sfx"])
         n_in = 1 + sum(1 for x in inputs if x == "-i")
         sfx_inputs, mix = sfx.mix(notes["sfx"], n_in, workdir, cfg["sfx"].get("volume", 0.55))
         inputs += sfx_inputs
         filters.append("[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]" if cfg["loudnorm"]
                        else "[0:a]anull[a0]")
         filters.append(mix)
-        log(f"  sound effects: {', '.join(f'{n} at {t:.1f}s' for t, n in notes['sfx'])}", "info")
+        log(f"  sound effects: {', '.join(f'{n} at {t:.1f}s' for t, n, _ in notes['sfx'])}", "info")
     else:
         filters.append("[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]" if cfg["loudnorm"]
                        else "[0:a]anull[a]")

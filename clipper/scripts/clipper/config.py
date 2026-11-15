@@ -177,8 +177,9 @@ DEFAULTS = {
     "sfx": {
         "enabled": False,
         "volume": 0.55,              # 0-1, mixed over the clip's own sound
-        "on_beat": "boom",           # boom | whoosh | pop | None
-        "on_hook": "whoosh",         # when the title appears; None for silence
+        "on_beat": "thud",           # thud | boom | whoosh | pop | None
+        "pause_reach": 1.5,          # play the beat hit in the next pause within this many s (0 = on the beat)
+        "on_hook": None,             # sound when the title appears (e.g. "whoosh"); no reference video does this
     },
     "mix_presets": ["clean", "seam", "punch", "keyword", "serif", "none"],
 

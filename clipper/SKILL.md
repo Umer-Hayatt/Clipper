@@ -35,7 +35,7 @@ clip "D:/recordings/rec.mp4" --section 1:30:00-1:45:00   # a local file, only th
 | `--look NAME` | caption look: `clean` (default), `bold`, `boxed`, `seam` (small capitals on the cam/gameplay seam), `punch` (one italic word at a time, changing colours), `keyword` (condensed capitals, key words in green), `serif`, `none` (no captions), or `mix` (a different look per clip, some with no captions) |
 | `--title bar/pill/text` | title style: white plate (default), red plate, or plain outlined text with no plate |
 | `--beats` | on each clip's peak (Claude picks 0-2), flash a big tilted word with a punch-in zoom |
-| `--sfx` | sound effects the tool makes itself: a boom on each beat, a whoosh as the title appears |
+| `--sfx` | sound effects the tool makes itself: a thud on each beat, played in the next pause in speech (`sfx.on_beat`: thud/boom/whoosh/pop; `sfx.on_hook` adds one when the title appears) |
 | `--layout stream/face/fit` | force a look (default `auto` decides per clip; the comments style uses `fit`) |
 | `--model sonnet` | a lighter Claude model for picking, to save usage |
 | `--fast` | hardware encoding (NVIDIA / Intel Quick Sync / AMD / Mac). Use it on laptops |
