@@ -170,6 +170,8 @@ the text, `--fast` for the hardware encoder (recommended on this PC), `--fps sou
        `airhorn` (RDR so intense), `boom` (Roger Clark); music beds `tense-bed` (5.7 s) and `jynxzi-bed` (2.9 s).
        Rejected: the iShowSpeed slam (YAMNet finds no slam there, music under it) and the "Top 5 GTA RP" bed
        (cars and skidding, not music). The beds are short loops; longer clean music needs more references.
+       `airhorn` was checked to be a horn, not the streamer's scream: Air horn 0.60, Screaming/Yell/Shout 0.00,
+       pitch steady at 431 Hz (spread 0.46 semitones; a voice glides).
        No title whoosh by default (`sfx.on_hook`). Retuned on 2026-11-15 from `sound_events.py` measurements of
        the 13 references: added effects are rare, sit in pauses (speech score near 0), are 0 to +10 dB vs the clip's
        median level, and none plays a whoosh with the title. The old boom had 1% of its energy above 150 Hz
@@ -225,13 +227,20 @@ to decide when and where to place them, and when not to. The user will add more 
 - The sound fits the clip's kind: library tags carry the moment kinds (funny, rage, reaction, story).
 
 **Music**
-- Compilations and list videos carry background music (Jynxzi "1. Who tf is this", "Top 5 GTA RP", Talking Ben
-  memes, RDR "so intense"). It is loud in the gaps and drops under talking.
+- Compilations and list videos carry background music. Clearly added: Jynxzi "1. Who tf is this" and the
+  Talking Ben memes. The RDR2 references (RDR "so intense", Dutch, Emiru, Roger Clark) may be the game's own
+  score, so `tense-bed` (from RDR "so intense") may be game music. "Top 5 GTA RP" was cars, not music.
+- "Loud in the gaps, lower under talking" is unconfirmed: YAMNet cannot hear music under speech at all.
+  The tool's ducking was measured on the music track alone instead: threshold 0.06 gives about 7 dB down under
+  talking and within ~2 dB of full level in the gaps.
 - Single-moment reaction clips (Adin, Cyberpunk, GTA bros, CaseOh cow) have none.
 - Calm build-up: "Emiru's Moment Of Peace" has music for 0.5-10.6 s, then it stops before the twist. Not
   confirmed whether this is game music.
 - Tool rule: music is off by default (the tool makes single-moment clips). When it is turned on, it plays under
-  the whole clip, ducked under speech, and fades out at the payoff.
+  the whole clip, ducked under speech, and fades out at the payoff. **Music is manual for now** (`--music`): the
+  tool has no compilation/montage mode to switch it on by itself (`--cut` in the spec is not built).
+- Beds are looped, so they carry only 20 ms edge fades (longer baked fades made the 2.9 s bed dip to -39 dB
+  every loop).
 - YAMNet "Music" can be game or radio music, so music cut from the references stays "unconfirmed" until the user
   listens. Clean music under talking needs source separation (a multi-GB torch download); not done.
 

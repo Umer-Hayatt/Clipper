@@ -207,8 +207,10 @@ def mix(events, first_input, workdir, volume, audio_label="a0", out_label="a", m
         body.append(f"[{k}:a]aformat=sample_rates=48000:channel_layouts=stereo,"
                     f"atrim=0:{dur:.3f},asetpts=N/SR/TB,volume={float(music['volume']):.3f},"
                     f"afade=t=in:d=0.5,afade=t=out:st={out_at:.3f}:d=0.8[mus]")
-        # the clip's own sound pushes the music down while someone talks
-        body.append("[mus][sxkey]sidechaincompress=threshold=0.03:ratio=8:attack=20:"
+        # the clip's own sound pushes the music down while someone talks. Threshold 0.06,
+        # measured on a CaseOh clip: about 7 dB down under talking, and back to within ~2 dB
+        # of full level in the gaps (0.03 also ducked under game sound and room noise)
+        body.append("[mus][sxkey]sidechaincompress=threshold=0.06:ratio=8:attack=20:"
                     "release=400[musd]")
         base = "[sxmain]"
         labels.append("[musd]")

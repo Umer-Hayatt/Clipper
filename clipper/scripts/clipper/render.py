@@ -326,7 +326,7 @@ def finish(p, outdir, workdir, cfg, known):
     if notes.get("sfx") or notes.get("music"):
         n_in = 1 + sum(1 for x in inputs if x == "-i")
         sfx_inputs, mix = sfx.mix(notes.get("sfx") or [], n_in, workdir,
-                                  cfg["sfx"].get("volume", 0.55), music=notes.get("music"))
+                                  cfg["sfx"].get("volume", 0.45), music=notes.get("music"))
         inputs += sfx_inputs
         filters.append("[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]" if cfg["loudnorm"]
                        else "[0:a]anull[a0]")

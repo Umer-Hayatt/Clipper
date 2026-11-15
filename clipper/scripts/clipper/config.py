@@ -176,7 +176,7 @@ DEFAULTS = {
     # --- sound effects and music (HANDOFF.md "Sound rules"; library: scripts/sound_library.py) ---
     "sfx": {
         "enabled": False,
-        "volume": 0.55,              # 0-1, mixed over the clip's own sound
+        "volume": 0.45,              # 0-1 over the clip's own sound: about +10 dB vs the clip's median, like the refs
         "on_beat": "auto",           # auto = a library stinger that fits the clip's kind; or a sound's name;
                                      # thud | boom | whoosh | pop are made-up fallbacks; None = no stinger
         "per_clip": 1,               # stingers per clip (the references use 0-1): the latest beat(s) with a pause

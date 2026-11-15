@@ -82,9 +82,11 @@ def trim_hit(x, look_before=0.3, max_len=2.0, rise=8.0, tail=-30.0):
 
 
 def finish(x, kind):
-    """Fades and level: effects peak at -1 dBFS; music beds sit at -20 dBFS RMS."""
+    """Fades and level: effects peak at -1 dBFS; music beds sit at -20 dBFS RMS.
+    Music beds get only 20 ms edges (no clicks): they are looped, so longer fades would
+    dip every loop; the mix fades the whole bed in and out instead."""
     x = x.copy()
-    fin, fout = (0.005, 0.03) if kind == "sfx" else (0.5, 1.0)
+    fin, fout = (0.005, 0.03) if kind == "sfx" else (0.02, 0.02)
     n_in, n_out = min(len(x) // 2, int(SR * fin)), min(len(x) // 2, int(SR * fout))
     if n_in:
         x[:n_in] *= np.linspace(0, 1, n_in)[:, None]
