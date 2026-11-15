@@ -1,0 +1,11 @@
+#!/bin/bash
+# clip launcher (Git Bash / macOS / Linux): runs the clipper inside its own private Python env.
+ENV="$HOME/.clipper/venv"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+if [ -x "$ENV/Scripts/python.exe" ]; then BIN="$ENV/Scripts"; else BIN="$ENV/bin"; fi
+if [ ! -x "$BIN/python" ] && [ ! -x "$BIN/python.exe" ]; then
+  echo "Not set up yet. Run:  python \"$HERE/scripts/setup.py\"" >&2
+  exit 1
+fi
+export PATH="$BIN:$PATH" PYTHONUTF8=1
+exec "$BIN/python" "$HERE/scripts/run.py" "$@"

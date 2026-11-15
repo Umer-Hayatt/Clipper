@@ -1,0 +1,17 @@
+{
+ "fit": "[0:v]split=2[bg][fg];[bg]scale=180:320:force_original_aspect_ratio=increase:flags=fast_bilinear,crop=180:320,gblur=sigma=5,eq=brightness=-0.16,scale=1080:1920:flags=bilinear[bgb];[fg]scale=1080:1920:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[fgs];[bgb][fgs]overlay=(W-w)/2:(H-h)/2,format=yuv420p[vout]",
+ "fit_no_aspect": "[0:v]split=2[bg][fg];[bg]scale=180:320:force_original_aspect_ratio=increase:flags=fast_bilinear,crop=180:320,gblur=sigma=5,eq=brightness=-0.16,scale=1080:1920:flags=bilinear[bgb];[fg]scale=1080:1920:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[fgs];[bgb][fgs]overlay=(W-w)/2:(H-h)/2,format=yuv420p[vout]",
+ "fit_ultrawide": "[0:v]split=2[bg][fg];[bg]scale=180:320:force_original_aspect_ratio=increase:flags=fast_bilinear,crop=180:320,gblur=sigma=5,eq=brightness=-0.16,scale=1080:1920:flags=bilinear[bgb];[fg]crop=1920:1080:320:0,scale=1080:1920:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[fgs];[bgb][fgs]overlay=(W-w)/2:(H-h)/2,format=yuv420p[vout]",
+ "stream_right": "[0:v]split=2[a][b];[a]crop=400:280:1400:32,scale=1080:760:flags=lanczos,setsar=1[cam];[b]crop=1006:1080:394:0,scale=1080:1160:flags=lanczos,setsar=1[game];[cam][game]vstack=inputs=2,format=yuv420p[vout]",
+ "stream_right_noface": "[0:v]split=2[a][b];[a]crop=400:280:1400:68,scale=1080:760:flags=lanczos,setsar=1[cam];[b]crop=1006:1080:394:0,scale=1080:1160:flags=lanczos,setsar=1[game];[cam][game]vstack=inputs=2,format=yuv420p[vout]",
+ "stream_left": "[0:v]split=2[a][b];[a]crop=426:300:40:26,scale=1080:760:flags=lanczos,setsar=1[cam];[b]crop=1006:1080:560:0,scale=1080:1160:flags=lanczos,setsar=1[game];[cam][game]vstack=inputs=2,format=yuv420p[vout]",
+ "follow": "[0:v]crop=608:1080:x='646.0':y=0,scale=1080:1920:flags=lanczos,setsar=1,format=yuv420p[vout]",
+ "follow_black_bars": "[0:v]crop=544:968:x='678.0':y=56,scale=1080:1920:flags=lanczos,setsar=1,format=yuv420p[vout]",
+ "graph_fit": "[0:v]split=2[bg][fg];[bg]scale=180:320:force_original_aspect_ratio=increase:flags=fast_bilinear,crop=180:320,gblur=sigma=5,eq=brightness=-0.16,scale=1080:1920:flags=bilinear[bgb];[fg]scale=1080:1920:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[fgs];[bgb][fgs]overlay=(W-w)/2:(H-h)/2,format=yuv420p[vout]",
+ "graph_face": "[0:v]crop=608:1080:x='646.0':y=0,scale=1080:1920:flags=lanczos,setsar=1,format=yuv420p[vout]",
+ "graph_face_look": "face|None",
+ "graph_stream": "[0:v]split=2[a][b];[a]crop=676:476:1212:28,scale=1080:760:flags=lanczos,setsar=1[cam];[b]crop=1006:1080:914:0,scale=1080:1160:flags=lanczos,setsar=1[game];[cam][game]vstack=inputs=2,format=yuv420p[vout]",
+ "graph_stream_look": "stream|760",
+ "graph_two_parts": "[0:v]split=2[s_0][s_1];[s_0]trim=start=0.000:end=4.750,setpts=PTS-STARTPTS[in_0];[s_1]trim=start=4.750:end=10.000,setpts=PTS-STARTPTS[in_1];[in_0]split=2[a_0][b_0];[a_0]crop=676:476:1212:28,scale=1080:760:flags=lanczos,setsar=1[cam_0];[b_0]crop=1006:1080:914:0,scale=1080:1160:flags=lanczos,setsar=1[game_0];[cam_0][game_0]vstack=inputs=2,format=yuv420p[vout_0];[in_1]crop=608:1080:x='646.0':y=0,scale=1080:1920:flags=lanczos,setsar=1,format=yuv420p[vout_1];[vout_0]setsar=1,format=yuv420p[vs_0];[vout_1]setsar=1,format=yuv420p[vs_1];[vs_0][vs_1]concat=n=2:v=1:a=0[vout]",
+ "graph_two_parts_look": "stream+face|None"
+}

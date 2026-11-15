@@ -1,0 +1,36 @@
+# Allowlist: ignore everything, then un-ignore only the tool and its docs.
+# This keeps videos, clip outputs, backup folders, work caches and other
+# local files out of the repo by default.
+/*
+!/.gitignore
+!/.gitattributes
+!/clipper/
+!/HANDOFF.md
+!/CLIPPER_DESIGN.md
+!/OVERHAUL_PLAN.md
+
+# Never commit these, even inside the tool folder
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+work/
+*.mp4
+*.mkv
+*.webm
+*.m4a
+*.wav
+*.mp3
+*.log
+*.onnx
+*.tflite
+*.zip
+
+# Secrets and browser cookies
+.env
+.env.*
+*.pem
+*.key
+cookies*.txt
+*.cookies
