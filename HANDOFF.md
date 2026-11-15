@@ -36,6 +36,7 @@ and was made generic and Windows-native.
 | `clipper\editorial.md` | The editable writing guide for hooks, captions, hashtags, reaction lines |
 | `clipper\fonts\` | Bundled Inter weights (open licence) |
 | `clipper\scripts\specimen.py` / `bench_pick.py` | Look preview on a still / picking timing test |
+| `clipper\scripts\sound_events.py` | Lists the sounds in a video and when each plays (YAMNet, 521 labels, ~3 s per minute of audio). Use it to measure reference videos instead of guessing. Hears effects that stand out; effects buried under loud speech are masked, and deep sub-bass booms read as "Music/Drum". |
 | `clipper\scripts\clipper\cards.py` | Comments style: chat cards / reaction stickers, timing, ffmpeg pop-in overlay |
 | `clipper\scripts\clipper\config.py` | All defaults; overrides go in `<clips>/config.json` |
 | `clipper\profiles\gta6.md`, `general.md` | What a great moment is, per game |
@@ -204,6 +205,11 @@ found "by border" at 374x592). Worth tuning `_cam_rect`/`_stream` in `layout.py`
 - Tools: ffmpeg 9 (winget Gyan), Python 3.12, uv, node (`E:\New Folder\node.exe`). Hardware encoder: `h264_qsv`.
 - Private env: `~/.clipper/venv` (uv needs `--no-cache` here, or it fails with "too many temporary files").
   Models: `~/.clipper/models/yunet.onnx` and Whisper tiny/base in the HF cache.
+  `~/.clipper/models/yamnet/` (yamnet.onnx + yamnet.data + labels.txt): Qualcomm's MIT export from
+  huggingface.co/qualcomm/YamNet v0.66.0, `yamnet-onnx-float.zip`, sha256 cf08212c...d309. Input is a
+  1x1x96x64 log-mel patch (frontend is in `sound_events.py`); output is 521 logits.
+- Git: repo `github.com/Umer-Hayatt/Clipper`, branch `main`. `.gitignore` is an allowlist (only `clipper/` and the
+  three design docs); videos, clip outputs, backups and models stay local.
 - `yt-dlp[default]` is required (EJS challenge solver), otherwise YouTube "signature solving failed".
 - The `claude` CLI is logged in. Picking uses `claude -p --no-session-persistence --tools "" --strict-mcp-config
   --system-prompt ...` (lean, to save usage), with a fallback to plain `claude -p`.
