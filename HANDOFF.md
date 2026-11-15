@@ -208,6 +208,10 @@ Items 3-6 are planned in detail in `OVERHAUL_PLAN.md` section 7 (stages 10-13).
 found "by border" at 374x592). Worth tuning `_cam_rect`/`_stream` in `layout.py`.
 
 ## Sound rules (measured from the 13 references, 2026-11-15)
+**PARKED (user, 2026-11-15): do not work on background music or sound effects until the user brings it back.**
+The user was not happy with the music results and will provide their own background music later. The code stays
+as it is, and both stay off by default (`sfx.enabled`, `music.enabled` false; `--sfx`, `--music` opt-in).
+The listening tool `scripts/sound_events.py` stays in use: it lets the agent check what is in a video's audio.
 Source: `sound_events.py` per reference, Whisper words, ffmpeg scene cuts, and frames at each candidate.
 User's direction: use sounds taken from the references (no generated sounds); the tool's job is
 to decide when and where to place them, and when not to. The user will add more references later.
