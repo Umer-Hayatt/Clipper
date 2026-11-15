@@ -173,13 +173,25 @@ DEFAULTS = {
         "rotate": -6,                # degrees
     },
 
-    # --- sound effects (made by the tool itself, no downloads) ---
+    # --- sound effects and music (HANDOFF.md "Sound rules"; library: scripts/sound_library.py) ---
     "sfx": {
         "enabled": False,
         "volume": 0.55,              # 0-1, mixed over the clip's own sound
-        "on_beat": "thud",           # thud | boom | whoosh | pop | None
-        "pause_reach": 1.5,          # play the beat hit in the next pause within this many s (0 = on the beat)
+        "on_beat": "auto",           # auto = a library stinger that fits the clip's kind; or a sound's name;
+                                     # thud | boom | whoosh | pop are made-up fallbacks; None = no stinger
+        "per_clip": 1,               # stingers per clip (the references use 0-1): the latest beat(s) with a pause
+        "pause_reach": 1.5,          # play it in the next pause within this many s (0 = exactly on the beat)
+        "no_pause": "skip",          # talking all the way: skip (like the references) | keep (on the beat)
         "on_hook": None,             # sound when the title appears (e.g. "whoosh"); no reference video does this
+        "library": None,             # sound library folder; None = ~/.clipper/sounds
+        "confirmed_only": False,     # True = only sounds you have listened to and confirmed
+    },
+    "music": {
+        "enabled": False,            # the references use music for compilations, not single moments
+        "sound": "auto",             # auto = a library bed that fits the clip's kind; or a bed's name
+        "volume": 0.6,               # 0-1 before ducking; the bed sits at -20 dBFS RMS in the library
+        "library": None,
+        "confirmed_only": False,
     },
     "mix_presets": ["clean", "seam", "punch", "keyword", "serif", "none"],
 

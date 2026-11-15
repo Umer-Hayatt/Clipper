@@ -131,9 +131,9 @@ class TestHitInPause(unittest.TestCase):
         w = self._talk((0.5, 1.4), (2.4, 3.5))
         self.assertAlmostEqual(sfx.in_pause(1.8, w, self.RATE), 1.8, delta=0.03)
 
-    def test_no_pause_within_reach_stays(self):
+    def test_talking_all_the_way_means_no_place(self):
         w = self._talk((0.5, 3.5))
-        self.assertEqual(sfx.in_pause(1.2, w, self.RATE), 1.2)
+        self.assertIsNone(sfx.in_pause(1.2, w, self.RATE))
 
     def test_reach_zero_or_no_audio_stays(self):
         w = self._talk((0.5, 1.4))
@@ -149,8 +149,112 @@ class TestHitInPause(unittest.TestCase):
     def test_defaults_match_the_references(self):
         d = config.DEFAULTS["sfx"]
         self.assertFalse(d["enabled"])                         # still opt-in
-        self.assertEqual(d["on_beat"], "thud")
+        self.assertEqual((d["on_beat"], d["per_clip"], d["no_pause"]), ("auto", 1, "skip"))
         self.assertIsNone(d["on_hook"])
+        self.assertFalse(config.DEFAULTS["music"]["enabled"])
+
+
+class TestLibrary(unittest.TestCase):
+    def _lib(self, tmp):
+        import json
+        lib = Path(tmp)
+        sounds = {"camera": ("sfx", ["stinger", "funny"]), "horn": ("sfx", ["stinger", "rage"]),
+                  "riser": ("sfx", ["transition"]), "bed": ("music", ["tense"])}
+        for name, (kind, tags) in sounds.items():
+            (lib / kind).mkdir(exist_ok=True)
+            (lib / kind / f"{name}.wav").write_bytes(b"RIFF")
+        (lib / "manifest.json").write_text(json.dumps({"sounds": {
+            n: {"kind": k, "tags": t, "confirmed": n == "camera"} for n, (k, t) in sounds.items()}}))
+        return lib
+
+    def test_mood_picks_the_matching_stinger(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            part = {"library": str(self._lib(tmp))}
+            self.assertEqual(sfx.choose("sfx", "rage", "clip1", part, "stinger").stem, "horn")
+            self.assertEqual(sfx.choose("sfx", "funny", "clip1", part, "stinger").stem, "camera")
+            # no match: any stinger, never the non-stinger "riser"
+            picks = {sfx.choose("sfx", "story", f"c{i}", part, "stinger").stem for i in range(20)}
+            self.assertEqual(picks, {"camera", "horn"})
+
+    def test_named_sound_and_confirmed_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib = str(self._lib(tmp))
+            self.assertEqual(sfx.choose("sfx", None, "c", {"library": lib, "sound": "riser"}).stem,
+                             "riser")
+            self.assertIsNone(sfx.choose("sfx", None, "c", {"library": lib, "sound": "nope"}))
+            only = {"library": lib, "confirmed_only": True}
+            self.assertEqual(sfx.choose("sfx", "rage", "c", only, "stinger").stem, "camera")
+
+    def test_empty_library_gives_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(sfx.choose("music", "tense", "c", {"library": tmp}))
+
+    def test_music_bed_is_looped_ducked_and_faded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bed = Path(tmp) / "bed.wav"
+            bed.write_bytes(b"RIFF")
+            inputs, graph = sfx.mix([], 2, Path(tmp), 0.5,
+                                    music={"path": str(bed), "dur": 30, "volume": 0.3,
+                                           "fade_out": 20})
+        self.assertEqual(inputs[:3], ["-stream_loop", "-1", "-i"])
+        self.assertIn("sidechaincompress", graph)
+        self.assertIn("afade=t=out:st=19.200", graph)
+        self.assertIn("[sxmain][musd]amix=inputs=2", graph)
+
+    def test_dropped_hit_is_not_mixed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(sfx.mix([(None, "thud", "beat")], 1, Path(tmp), 0.5),
+                             ([], "[a0]anull[a]"))
+
+
+class TestStingerPlacement(unittest.TestCase):
+    """render._place_hits: one stinger, on the latest beat that has a real pause after it."""
+
+    def _run(self, sounds, **sfx_cfg):
+        from clipper import render
+        rate = 16000
+        rng = np.random.default_rng(1)
+        w = (rng.standard_normal(rate * 10) * 0.002).astype(np.float32)
+        for a, b in [(0.5, 3.0), (3.6, 10.0)]:         # one real pause: 3.0-3.6
+            w[int(a * rate):int(b * rate)] = rng.standard_normal(int((b - a) * rate)) * 0.3
+        cfg = {"sfx": dict({"per_clip": 1, "pause_reach": 1.5, "no_pause": "skip"}, **sfx_cfg)}
+        old = render.pcm
+        render.pcm = lambda *a, **k: w
+        try:
+            return render._place_hits(sounds, cfg, "x", 0.0, 10.0)
+        finally:
+            render.pcm = old
+
+    def test_last_beat_without_pause_falls_back_to_an_earlier_one(self):
+        out = self._run([(2.5, "horn", "beat"), (8.0, "horn", "beat")])
+        self.assertEqual(len(out), 1)
+        self.assertAlmostEqual(out[0][0], 3.0, delta=0.05)
+
+    def test_no_beat_with_a_pause_means_no_stinger(self):
+        self.assertEqual(self._run([(5.0, "horn", "beat"), (8.0, "horn", "beat")]), [])
+
+    def test_keep_puts_it_on_the_last_beat(self):
+        self.assertEqual(self._run([(5.0, "horn", "beat"), (8.0, "horn", "beat")],
+                                   no_pause="keep"), [(8.0, "horn", "beat")])
+
+    def test_other_sounds_pass_through(self):
+        self.assertEqual(self._run([(0.0, "whoosh", "hook")], per_clip=0),
+                         [(0.0, "whoosh", "hook")])
+
+
+class TestSoundLibraryCuts(unittest.TestCase):
+    def test_trim_finds_the_hit_and_levels_it(self):
+        import sound_library as sl
+        sr = sl.SR
+        x = np.zeros((sr * 2, 2), np.float32) + 0.001
+        t = np.arange(int(0.3 * sr)) / sr
+        hit = (np.sin(2 * np.pi * 300 * t) * np.exp(-t / 0.05)).astype(np.float32)
+        x[int(0.5 * sr):int(0.8 * sr)] += hit[:, None] * 0.5
+        cut, off = sl.trim_hit(x, look_before=0.3)
+        self.assertAlmostEqual(off, 0.48, delta=0.03)
+        self.assertLess(len(cut) / sr, 0.6)
+        out = sl.finish(cut, "sfx")
+        self.assertAlmostEqual(float(np.abs(out).max()), 0.891, delta=0.01)
 
 
 if __name__ == "__main__":

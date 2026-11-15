@@ -1,6 +1,8 @@
 """Make each clip: get only its video, line it up with the audio to the frame, write
 exact captions, frame it 9:16, add the title bar, encode."""
 
+from pathlib import Path
+
 import numpy as np
 
 from . import captions, cards, config, hook, layout, scan, sfx
@@ -205,9 +207,19 @@ def overlays(cur, n_in, m, words, dur, name, workdir, cfg, theme, look, cam_h, f
             filters.append(f"[{cur}]ass=f='{bass.name}':fontsdir='fonts'[vbt]")
             cur = "vbt"
             notes["beats"] = len(beat_items)
-            if cfg["sfx"].get("on_beat"):
-                # finish() moves these into the next pause in the clip's sound
-                sounds += [(float(b["at"]), cfg["sfx"]["on_beat"], "beat") for b in beat_items]
+            want = cfg["sfx"].get("on_beat")
+            if want:
+                # the references put one stinger on the payoff, not one per beat; every beat
+                # is a candidate and finish() keeps the latest one(s) with a real pause after
+                if want == "auto":
+                    want = str(sfx.choose("sfx", m.get("kind"), name, cfg["sfx"], "stinger")
+                               or "thud")
+                elif want not in sfx.NAMES:
+                    want = str(sfx.choose("sfx", None, name, dict(cfg["sfx"], sound=want))
+                               or "thud")
+                sounds += [(float(b["at"]), want, "beat") for b in beat_items]
+    if beat_items:
+        notes["payoff"] = max(float(b["at"]) for b in beat_items)
 
     if hook_png:
         inputs += ["-framerate", rate, "-i", str(hook_png)]
@@ -216,7 +228,15 @@ def overlays(cur, n_in, m, words, dur, name, workdir, cfg, theme, look, cam_h, f
         if cfg["sfx"].get("on_hook"):
             sounds.append((0.0, cfg["sfx"]["on_hook"], "hook"))
     if cfg["sfx"].get("enabled") and sounds:
-        notes["sfx"] = sorted(sounds)
+        notes["sfx"] = sorted(sounds, key=lambda s: s[0])
+    if cfg.get("music", {}).get("enabled"):
+        bed = sfx.choose("music", m.get("kind"), name, cfg["music"])
+        if bed:
+            notes["music"] = {"path": str(bed), "dur": dur,
+                              "volume": float(cfg["music"].get("volume", 0.6)),
+                              "fade_out": notes.get("payoff") or dur}
+        else:
+            log("  music skipped: the sound library has no music (see sound_library.py)", "warn")
 
     if cfg["style"] == "comments" and m.get("comments"):
         faces_bottom = None
@@ -246,6 +266,40 @@ def overlays(cur, n_in, m, words, dur, name, workdir, cfg, theme, look, cam_h, f
     return filters, inputs, cur, notes
 
 
+def _place_hits(sounds, cfg, part, offset, dur):
+    """Pick where the stinger(s) go. Beats are tried from the last (the payoff) back; each
+    kept one moves into the next real pause in the clip's own sound, up to sfx.per_clip.
+    A beat with talking all the way through is passed over (sfx.no_pause "skip", like the
+    references) or, with "keep", used on the beat itself."""
+    beats = sorted((s for s in sounds if s[2] == "beat"), key=lambda s: -s[0])
+    rest = [s for s in sounds if s[2] != "beat"]
+    want = max(0, int(cfg["sfx"].get("per_clip", 1)))
+    reach = float(cfg["sfx"].get("pause_reach", 1.5))
+    if not beats or want == 0:
+        return rest
+    if reach <= 0:
+        return sorted(rest + beats[:want], key=lambda s: s[0])
+    try:
+        wave = pcm(part, 16000, offset, dur)
+    except RuntimeError:
+        wave = None
+    keep = cfg["sfx"].get("no_pause", "skip") == "keep"
+    placed = []
+    for at, name, kind in beats:
+        t = sfx.in_pause(at, wave, 16000, reach)
+        if t is None:
+            log(f"  no stinger at {at:.1f}s: talking all the way through", "info")
+            if not keep:
+                continue
+            t = at
+        placed.append((t, name, kind))
+        if len(placed) == want:
+            break
+    if not placed:
+        log("  stinger skipped: no beat in this clip is followed by a pause", "info")
+    return sorted(rest + placed, key=lambda s: s[0])
+
+
 def finish(p, outdir, workdir, cfg, known):
     """Frame, title, caption and encode one prepared clip."""
     m, dur, part, name = p["moment"], p["dur"], p["part"], p["name"]
@@ -268,21 +322,21 @@ def finish(p, outdir, workdir, cfg, known):
     filters += extra
     filters.append(f"[{cur}]format=yuv420p[v]")
     if notes.get("sfx"):
-        reach = float(cfg["sfx"].get("pause_reach", 1.5))
-        if reach > 0 and any(kind == "beat" for _, _, kind in notes["sfx"]):
-            try:
-                wave = pcm(part, 16000, p["offset"], dur)
-            except RuntimeError:
-                wave = None
-            notes["sfx"] = sorted((sfx.in_pause(at, wave, 16000, reach) if kind == "beat" else at,
-                                   name, kind) for at, name, kind in notes["sfx"])
+        notes["sfx"] = _place_hits(notes["sfx"], cfg, part, p["offset"], dur)
+    if notes.get("sfx") or notes.get("music"):
         n_in = 1 + sum(1 for x in inputs if x == "-i")
-        sfx_inputs, mix = sfx.mix(notes["sfx"], n_in, workdir, cfg["sfx"].get("volume", 0.55))
+        sfx_inputs, mix = sfx.mix(notes.get("sfx") or [], n_in, workdir,
+                                  cfg["sfx"].get("volume", 0.55), music=notes.get("music"))
         inputs += sfx_inputs
         filters.append("[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]" if cfg["loudnorm"]
                        else "[0:a]anull[a0]")
         filters.append(mix)
-        log(f"  sound effects: {', '.join(f'{n} at {t:.1f}s' for t, n, _ in notes['sfx'])}", "info")
+        if notes.get("sfx"):
+            log("  sound effects: " + ", ".join(f"{Path(str(n)).stem} at {t:.1f}s"
+                                                 for t, n, _ in notes["sfx"]), "info")
+        if notes.get("music"):
+            log(f"  music: {Path(notes['music']['path']).stem}, fading out at "
+                f"{notes['music']['fade_out']:.1f}s", "info")
     else:
         filters.append("[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]" if cfg["loudnorm"]
                        else "[0:a]anull[a]")

@@ -62,7 +62,11 @@ def parse(argv):
     p.add_argument("--beats", action="store_true",
                    help="flash a big word with a punch-in zoom on each clip's peak moment")
     p.add_argument("--sfx", action="store_true",
-                   help="add sound effects (a thud on each beat, in the next pause in speech)")
+                   help="add one stinger per clip from the sound library, on the payoff beat, "
+                        "in the next pause (needs --beats; skipped when there is no pause)")
+    p.add_argument("--music", action="store_true",
+                   help="add a background music bed from the sound library, ducked under "
+                        "talking, fading out at the payoff")
     p.add_argument("--fps", dest="output_fps",
                    help='frames per second of the clips: a number (default 30) or "source"')
     return p.parse_args(argv)
@@ -201,6 +205,8 @@ def main(argv=None):
         cfg["beats"]["enabled"] = True
     if opts.sfx:
         cfg["sfx"]["enabled"] = True
+    if opts.music:
+        cfg["music"]["enabled"] = True
     profile = config.profile_text(cfg["profile"])
     config.HOME.mkdir(parents=True, exist_ok=True)
     free_gb = shutil.disk_usage(config.HOME).free / 1e9

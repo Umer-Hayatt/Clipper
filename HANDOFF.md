@@ -36,6 +36,7 @@ and was made generic and Windows-native.
 | `clipper\editorial.md` | The editable writing guide for hooks, captions, hashtags, reaction lines |
 | `clipper\fonts\` | Bundled Inter weights (open licence) |
 | `clipper\scripts\specimen.py` / `bench_pick.py` | Look preview on a still / picking timing test |
+| `clipper\scripts\sound_library.py` | Adds/confirms/removes the stingers and music beds the clipper may use. Cuts them from the user's reference videos into `~/.clipper/sounds` (never in git). `--label` finds the exact spot with YAMNet; `--exact` cuts a fixed range. New sounds are "unconfirmed" until the user listens. |
 | `clipper\scripts\sound_events.py` | Lists the sounds in a video and when each plays (YAMNet, 521 labels, ~3 s per minute of audio). Use it to measure reference videos instead of guessing. Hears effects that stand out; effects buried under loud speech are masked, and deep sub-bass booms read as "Music/Drum". |
 | `clipper\scripts\clipper\cards.py` | Comments style: chat cards / reaction stickers, timing, ffmpeg pop-in overlay |
 | `clipper\scripts\clipper\config.py` | All defaults; overrides go in `<clips>/config.json` |
@@ -160,8 +161,15 @@ the text, `--fast` for the hardware encoder (recommended on this PC), `--fps sou
      - `clipper/sfx.py` makes thud/boom/whoosh/pop from plain maths (no downloads). With `sfx.enabled` they are
        mixed after loudnorm: a thud on each beat, moved to the next pause within 1.5 s (`sfx.pause_reach`). Pauses
        are found in the clip's own sound (`sfx.in_pause`: 120 ms at 14 dB under the loud part), not in word
-       timings: YouTube caption words have no gaps and the last word of a line is stretched. With no pause in
-       reach the hit stays on the beat (3 of 5 CaseOh beats sit inside unbroken talking).
+       timings: YouTube caption words have no gaps and the last word of a line is stretched.
+     - **Superseded later on 2026-11-15 (user's direction):** sounds now come from the sound library cut from
+       the references (`sound_library.py`), the made-up sounds are only a fallback, and the rules in "Sound rules"
+       apply: one stinger per clip on the last beat, skipped with no pause (`sfx.no_pause`), music opt-in
+       (`--music`).
+     - Library on 2026-11-15 (all unconfirmed, the user has not listened yet): stingers `camera` (CaseOh cow),
+       `airhorn` (RDR so intense), `boom` (Roger Clark); music beds `tense-bed` (5.7 s) and `jynxzi-bed` (2.9 s).
+       Rejected: the iShowSpeed slam (YAMNet finds no slam there, music under it) and the "Top 5 GTA RP" bed
+       (cars and skidding, not music). The beds are short loops; longer clean music needs more references.
        No title whoosh by default (`sfx.on_hook`). Retuned on 2026-11-15 from `sound_events.py` measurements of
        the 13 references: added effects are rare, sit in pauses (speech score near 0), are 0 to +10 dB vs the clip's
        median level, and none plays a whoosh with the title. The old boom had 1% of its energy above 150 Hz
@@ -196,6 +204,36 @@ Items 3-6 are planned in detail in `OVERHAUL_PLAN.md` section 7 (stages 10-13).
 
 **Small known issue (planned fix: `OVERHAUL_PLAN.md` 7.1, stage 4):** on one test clip the facecam crop cut off the top of the streamer's head (the cam rect was
 found "by border" at 374x592). Worth tuning `_cam_rect`/`_stream` in `layout.py`.
+
+## Sound rules (measured from the 13 references, 2026-11-15)
+Source: `sound_events.py` per reference, Whisper words, ffmpeg scene cuts, and frames at each candidate.
+User's direction: use sounds taken from the references (no generated sounds); the tool's job is
+to decide when and where to place them, and when not to. The user will add more references later.
+
+**Sound effects (stingers)**
+- Rare: 0-1 added stinger per clip. The clear ones are the camera shutter (CaseOh cow, 79% of the clip), the air horn
+  (RDR "so intense", 86%) and the slam (iShowSpeed, 91%). The boom under flash words is at 5% (Roger Clark).
+- Each sits on the payoff: right after the punchline line ends ("Is that true?", "could you imagine I died fully?",
+  "Here it is."), in a pause (speech score 0.00-0.01), with something on screen at the same time (a meme caption,
+  a scream reaction, a blur transition, big flash words with a cut).
+- Level: about 0 to +10 dB vs the clip's median.
+- **When not to:** never over unbroken talking (no reference does it); never on game action that already has its
+  own loud sound (gunfire, explosions, sirens are game audio, not edits); not on the title.
+- Tool rule: one stinger per clip, on the latest beat that has a real pause (at least 0.25 s, 14 dB down) within
+  1.5 s after it, played at the start of that pause. No beat with a pause = no stinger. (A 0.12 s minimum let
+  a breath between "YOU" and "$500" count, and the air horn was buried under "$500": YAMNet score 0.02.)
+- The sound fits the clip's kind: library tags carry the moment kinds (funny, rage, reaction, story).
+
+**Music**
+- Compilations and list videos carry background music (Jynxzi "1. Who tf is this", "Top 5 GTA RP", Talking Ben
+  memes, RDR "so intense"). It is loud in the gaps and drops under talking.
+- Single-moment reaction clips (Adin, Cyberpunk, GTA bros, CaseOh cow) have none.
+- Calm build-up: "Emiru's Moment Of Peace" has music for 0.5-10.6 s, then it stops before the twist. Not
+  confirmed whether this is game music.
+- Tool rule: music is off by default (the tool makes single-moment clips). When it is turned on, it plays under
+  the whole clip, ducked under speech, and fades out at the payoff.
+- YAMNet "Music" can be game or radio music, so music cut from the references stays "unconfirmed" until the user
+  listens. Clean music under talking needs source separation (a multi-GB torch download); not done.
 
 ## Decisions already made (don't re-ask)
 - **Own lightweight skill, not built on SupoClip.** Borrow ideas only, because SupoClip is AGPL and a full web platform.

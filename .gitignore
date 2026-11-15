@@ -22,6 +22,12 @@ work/
 *.m4a
 *.wav
 *.mp3
+*.ogg
+*.flac
+*.opus
+*.aac
+*.aiff
+*.mov
 *.log
 *.onnx
 *.tflite

@@ -35,7 +35,8 @@ clip "D:/recordings/rec.mp4" --section 1:30:00-1:45:00   # a local file, only th
 | `--look NAME` | caption look: `clean` (default), `bold`, `boxed`, `seam` (small capitals on the cam/gameplay seam), `punch` (one italic word at a time, changing colours), `keyword` (condensed capitals, key words in green), `serif`, `none` (no captions), or `mix` (a different look per clip, some with no captions) |
 | `--title bar/pill/text` | title style: white plate (default), red plate, or plain outlined text with no plate |
 | `--beats` | on each clip's peak (Claude picks 0-2), flash a big tilted word with a punch-in zoom |
-| `--sfx` | sound effects the tool makes itself: a thud on each beat, played in the next pause in speech (`sfx.on_beat`: thud/boom/whoosh/pop; `sfx.on_hook` adds one when the title appears) |
+| `--sfx` | one stinger per clip from the sound library (`~/.clipper/sounds`), picked to fit the clip's kind, on the payoff beat, in the next pause; skipped when the talking does not stop. Needs `--beats`. Empty library: a made-up thud |
+| `--music` | a background music bed from the sound library, ducked under talking, fading out at the payoff. The references only use music for compilations, so it is off by default |
 | `--layout stream/face/fit` | force a look (default `auto` decides per clip; the comments style uses `fit`) |
 | `--model sonnet` | a lighter Claude model for picking, to save usage |
 | `--fast` | hardware encoding (NVIDIA / Intel Quick Sync / AMD / Mac). Use it on laptops |
